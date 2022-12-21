@@ -21,53 +21,48 @@ def prepare_matches(match_files: list):
     return df.reset_index(drop=True)
 
 
-class MatchDataset(Dataset):
+class DataInterface:
 
-    COLS = [
-        "winner_seed",
-        "winner_hand",
-        "loser_seed",
-        "loser_hand",
-        "surface",
-        "tourney_level",
-        "round",
-        "best_of",
-    ]
-    COL_TYPES = ["num", "cat", "num", "cat", "cat", "cat", "cat", "cat"]
+    def __init__(self, type_map):
 
-    def __init__(self, matches):
+        self.type_map = {k: (v, None) for k, v in type_map.items()}
+        if not all(v in ["numeric", "time", "categorical"] for v in type_map.values()):
+            raise ValueError("All specified types must be 'numeric', 'time', or 'categorical'")
 
-        super().__init__()
-        self.matches = matches[self.COLS]
+    def complete(self, data):
 
-        self.type_regularizers = dict()
+        for col, val in self.type_map.items():
 
-        for col, col_type in zip(self.COLS, self.COL_TYPES):
+            dt = data[col]
+            
+            if val[0] == "numeric":
+                self.type_map[col] = ("numeric", (dt.min(), dt.max()))
 
-            if col_type == "num":
-
-                self.type_regularizers[col] = NumericRegularizer(
-                    [matches[col].min(), matches[col].max()]
-                )
+            elif val[0] == "time":
+                self.type_map[col] = ("time", "days")
 
             else:
-
-                self.type_regularizers[col] = CategoricalIndexer()
+                self.type_map[col] = ("categorical", {k: i for i, k in enumerate(dt.unique())})
 
     def __len__(self):
+        return len(self.type_map)
 
-        return len(self.matches)
+    def type_sizes(self):
+        return {
+            "numeric": sum(v[0] == "numeric" for v in self.type_map.values()),
+            "time": sum(v[0] == "time" for v in self.type_map.values()),
+            "categorical": sum(v[0] == "categorical" for v in self.type_map.values()),
+        }
 
-    def __getitem__(self, idx):
+    def numeric(self):
+        return {k: v for k, v in self.type_map.items() if v[0] == "numeric"}
 
-        row = self.matches.iloc[idx]
+    def time(self):
+        return {k: v for k, v in self.type_map.items() if v[0] == "time"}
 
-        x = torch.zeros([1, len(self.type_regularizers)])
+    def categorical(self):
+        return {k: v for k, v in self.type_map.items() if v[0] == "categorical"}
 
-        for i, pair in enumerate(self.type_regularizers.items()):
-            x[i, 0] = pair[1](row[pair[0]])
-
-        return x
 
 
 class NumericRegularizer:
