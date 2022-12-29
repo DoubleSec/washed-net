@@ -70,14 +70,25 @@ class DataInterface:
     def __repr__(self):
         return f"DataInterface:\n {pprint.pformat(self.type_map)}"
 
-    def numeric(self):
-        return {k: v for k, v in self.type_map.items() if v[0] == "numeric"}
 
-    def time(self):
-        return {k: v for k, v in self.type_map.items() if v[0] == "time"}
+class MatchDataset(Dataset):
 
-    def categorical(self):
-        return {k: v for k, v in self.type_map.items() if v[0] == "categorical"}
+    def __init__(self, input_data: dict, y: torch.Tensor):
+
+        super().__init__()
+
+        self.data = input_data
+        self.y = y
+
+    def __len__(self):
+        return self.y.shape[0]
+
+    def __getitem__(self, idx):
+
+        x = {k: v[idx, :] for k, v in self.data.items()}
+        y = self.y[idx, :]
+
+        return x, y
 
 
 if __name__ == "__main__":
