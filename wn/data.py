@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+import pprint
+
 
 def prepare_matches(match_files: list):
 
@@ -64,6 +66,9 @@ class DataInterface:
 
     def __getitem__(self, idx):
         return self.type_map[idx]
+
+    def __repr__(self):
+        return f"DataInterface:\n {pprint.pformat(self.type_map)}"
 
     def numeric(self):
         return {k: v for k, v in self.type_map.items() if v[0] == "numeric"}
