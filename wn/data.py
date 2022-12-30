@@ -6,6 +6,37 @@ from torch.utils.data import Dataset
 
 import pprint
 
+def tr(dt, col_name, interface):
+
+    print(f"Encoding {col_name}")
+
+    if interface[col_name][0] == "numeric":
+
+        q = interface[col_name][2]
+
+        dt = torch.tensor(dt.to_numpy(), dtype=torch.float)
+        # How many positions should be =1?
+        filled = torch.searchsorted(q, dt)
+
+        encoded = torch.zeros([filled.shape[0], q.shape[0]])
+
+        # There must be a better way to do this.
+        for i, n in enumerate(filled):
+            encoded[i, 0:n] = 1
+            if n > 0:
+                encoded[i, n] = (dt[i] - q[n-1]) / (q[n] - q[n-1])
+
+        return encoded
+
+    elif interface[col_name][0] == "time":
+        return torch.tensor(dt.to_numpy(), dtype=torch.float).unsqueeze(-1)
+
+    else:
+        return torch.tensor(
+            [interface[col_name][1][x] for x in dt.to_numpy()],
+            dtype=torch.int
+        ).unsqueeze(-1)
+
 
 def prepare_matches(match_files: list):
 
