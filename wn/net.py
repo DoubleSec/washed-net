@@ -4,6 +4,13 @@ from torch import nn
 from .data import DataInterface
 
 
+# Move every tensor in a dict to a device
+def to_(x: dict, device):
+
+  return {
+      k: v.to(device) for k, v in x.items()
+  }
+
 class Time2Vec(nn.Module):
     def __init__(self, size: int):
 
