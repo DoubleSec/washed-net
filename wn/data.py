@@ -6,25 +6,28 @@ from torch.utils.data import Dataset
 
 import pprint
 
+
 def tr(dt, col_name, interface):
 
     print(f"Encoding {col_name}")
 
     if interface[col_name][0] == "numeric":
 
-        q = interface[col_name][2]
+        dt = torch.tensor(dt.to_numpy(), dtype=torch.float).unsqueeze(-1)
+        q = interface[col_name][2].unsqueeze(0).expand([dt.shape[0], -1])
 
-        dt = torch.tensor(dt.to_numpy(), dtype=torch.float)
-        # How many positions should be =1?
-        filled = torch.searchsorted(q, dt)
+        # Create the tensor and fill the completely filled cells
+        encoded = torch.as_tensor(q < dt, dtype=torch.float)
 
-        encoded = torch.zeros([filled.shape[0], q.shape[0]])
+        # Find the partially filled cells
+        # (I'm guessing the cuteness here is numerically dangerous.)
+        part_filled = torch.argmax(1 / (q - dt), dim=1)
 
-        # There must be a better way to do this.
-        for i, n in enumerate(filled):
-            encoded[i, 0:n] = 1
-            if n > 0:
-                encoded[i, n] = (dt[i] - q[n-1]) / (q[n] - q[n-1])
+        # Calculate the fill values
+        fill_values = q[range(q.shape[0]), part_filled].view([dt.shape[0], 1]) - dt
+
+        # Fill the partial values
+        encoded[range(encoded.shape[0]), part_filled] = fill_values.squeeze()
 
         return encoded
 
@@ -33,8 +36,7 @@ def tr(dt, col_name, interface):
 
     else:
         return torch.tensor(
-            [interface[col_name][1][x] for x in dt.to_numpy()],
-            dtype=torch.int
+            [interface[col_name][1][x] for x in dt.to_numpy()], dtype=torch.int
         ).unsqueeze(-1)
 
 
@@ -59,6 +61,7 @@ class DataInterface:
     for some specific set of variables. The complete method
     facilitates collecting information that will be useful for
     encoding variables later."""
+
     def __init__(self, type_map: dict):
 
         self.type_map = {k: (v, None) for k, v in type_map.items()}
@@ -76,7 +79,7 @@ class DataInterface:
             if val[0] == "numeric":
                 self.type_map[col] = (
                     "numeric",
-                    (dt.min(), dt.max()),
+                    dt.to_numpy().mean().item(),
                     torch.quantile(
                         torch.tensor(dt.to_numpy(), dtype=torch.float),
                         torch.linspace(0, 1, 16),
@@ -103,7 +106,6 @@ class DataInterface:
 
 
 class MatchDataset(Dataset):
-
     def __init__(self, input_data: dict, y: torch.Tensor):
 
         super().__init__()

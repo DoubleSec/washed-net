@@ -7,9 +7,8 @@ from .data import DataInterface
 # Move every tensor in a dict to a device
 def to_(x: dict, device):
 
-  return {
-      k: v.to(device) for k, v in x.items()
-  }
+    return {k: v.to(device) for k, v in x.items()}
+
 
 class Time2Vec(nn.Module):
     def __init__(self, size: int):
@@ -75,7 +74,8 @@ class TabularInputLayer(nn.Module):
         if self.append_cls:
             self.cls_embedding = nn.Parameter(
                 torch.normal(
-                    torch.zeros([1, 1, self.embedding_size + self.col_encoding_size]), 1.0
+                    torch.zeros([1, 1, self.embedding_size + self.col_encoding_size]),
+                    1.0,
                 )
             )
 
@@ -104,7 +104,6 @@ class TabularInputLayer(nn.Module):
 
 # fc layers for output
 class OutputLayers(nn.Module):
-
     def __init__(self, d_model, n_hidden, output_size):
         """d_model should be the same as the transformer encoder"""
 
@@ -129,6 +128,7 @@ class OutputLayers(nn.Module):
         # forward() from the sequential module does what we want
         return self.layers(x)
 
+
 class SelectCLSEncoding(nn.Module):
     """Trivial class so I can use nn.Sequential. Nothing learnable in here"""
 
@@ -139,6 +139,7 @@ class SelectCLSEncoding(nn.Module):
     def forward(self, x):
         # Get the last value in this dimension (the CLS encoding)
         return x[:, -1, :]
+
 
 if __name__ == "__main__":
 
