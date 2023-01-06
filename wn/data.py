@@ -1,8 +1,8 @@
 import pandas as pd
-import numpy as np
 
 import torch
 from torch.utils.data import Dataset
+from torch.nn import functional as F
 
 import pprint
 
@@ -122,6 +122,79 @@ class MatchDataset(Dataset):
         y = self.y[idx, :]
 
         return x, y
+
+
+class MatchHistoryDataset(Dataset):
+    """Extended dataset class that additionally returns history."""
+
+    def __init__(
+        self,
+        input_data: dict,
+        y: torch.Tensor,
+        history_data: dict,
+        pid: torch.Tensor,
+        history_size: int = 30,
+    ):
+
+        super().__init__()
+
+        self.match_data = input_data
+        self.y = y
+        self.history_data = history_data
+        self.pid = pid.squeeze()  # Ugly
+        self.history_size = history_size
+
+    def __len__(self):
+        return self.y.shape[0]
+
+    def __getitem__(self, idx):
+
+        # First find the player who we're predicting for and our date limits
+        pid = self.pid[idx]
+        end_date = self.match_data["days_elapsed_date"].squeeze()[idx] - 1
+        start_date = end_date - 365
+
+        # Get the tabular features and the target
+        match_x = {k: v[idx, :] for k, v in self.match_data.items()}
+        y = self.y[idx, :]
+
+        # Now get the match history.
+        # This is implemented as 4 searchsorted calls for speed, which is why
+        # we needed to sort this data when we we constructed the data.
+
+        pid_left_bound = torch.searchsorted(self.pid, pid, right=False)
+        pid_right_bound = torch.searchsorted(self.pid, pid, right=True)
+
+        # This is just for convenience.
+        match_dates = self.history_data["days_elapsed_date"].squeeze()
+
+        player_match_dates = match_dates[pid_left_bound:pid_right_bound]
+        window_left_bound = (
+            torch.searchsorted(player_match_dates, start_date, right=False)
+            + pid_left_bound
+        )
+        window_right_bound = (
+            torch.searchsorted(player_match_dates, end_date, right=True)
+            + pid_left_bound
+        )
+        # Limit the amount of history we can look at
+        effective_right_bound = torch.minimum(
+            window_left_bound + self.history_size, window_right_bound
+        )
+
+        history_x = {
+            k: self._pad_history(v[window_left_bound:effective_right_bound, :])
+            for k, v in self.history_data.items()
+        }
+
+        pad_mask = torch.zeros(self.history_size, dtype=torch.bool)
+        pad_mask[: (effective_right_bound - window_left_bound)] = 1
+
+        return match_x, history_x, y, pad_mask
+
+    def _pad_history(self, x: torch.Tensor):
+
+        return F.pad(x, [0, 0, 0, self.history_size - x.shape[0]])
 
 
 if __name__ == "__main__":
