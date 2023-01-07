@@ -135,7 +135,9 @@ class SequentialInputLayer(nn.Module):
                 self.embedding[k] = nn.Linear(v[2].shape[0], embedding_size)
 
             elif v[0] == "categorical":
-                self.embedding[k] = nn.Embedding(len(v[1]), embedding_size)
+                self.embedding[k] = nn.Sequential(
+                    Squeezer(-1), nn.Embedding(len(v[1]), embedding_size)
+                )
 
             else:
                 # I don't know if this is justified, but the idea here is to
@@ -163,7 +165,7 @@ class SequentialInputLayer(nn.Module):
 
         # This will break if the batch size is 1
         # n x s x e
-        x = torch.cat([self.embedding[k](v).squeeze() for k, v in x.items()], dim=-1)
+        x = torch.cat([self.embedding[k](v) for k, v in x.items()], dim=-1)
 
         x = F.relu(x)
         x = self.projection_layer(x)
@@ -190,23 +192,30 @@ class FusionNet(nn.Module):
     we need to do very slightly more work to get everything put together."""
 
     def __init__(
-        self, table_input_layer, sequence_input_layer, transformer, output_layer
+        self,
+        table_input_layer,
+        p1_sequence_input_layer,
+        p2_sequence_input_layer,
+        transformer,
+        output_layer,
     ):
 
         super().__init__()
 
         self.table_input_layer = table_input_layer
-        self.sequence_input_layer = sequence_input_layer
+        self.p1_sequence_input_layer = p1_sequence_input_layer
+        self.p2_sequence_input_layer = p2_sequence_input_layer
         self.transformer = transformer
         self.output_layer = output_layer
 
-    def forward(self, tx, sx, mask):
+    def forward(self, tx, sx1, mask1, sx2, mask2):
 
         tx = self.table_input_layer(tx)
-        sx = self.sequence_input_layer(sx, mask)
+        sx1 = self.p1_sequence_input_layer(sx1, mask1)
+        sx2 = self.p2_sequence_input_layer(sx2, mask2)
 
         # Choosing this order so it's easier to find the CLS embedding later.
-        x = torch.cat([sx, tx], dim=1)
+        x = torch.cat([sx1, sx2, tx], dim=1)
         x = self.transformer(x)
         x = self.output_layer(x[:, -1, :])
 
@@ -238,6 +247,18 @@ class OutputLayers(nn.Module):
 
         # forward() from the sequential module does what we want
         return self.layers(x)
+
+
+class Squeezer(nn.Module):
+    def __init__(self, dim):
+
+        super().__init__()
+
+        self.dim = dim
+
+    def forward(self, x):
+
+        return x.squeeze(dim=self.dim)
 
 
 class SelectCLSEncoding(nn.Module):
