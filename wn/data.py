@@ -154,7 +154,7 @@ class MatchHistoryDataset(Dataset):
         # First find the player who we're predicting for and our date limits
         p1_id, p2_id = self.p1_id[idx], self.p2_id[idx]
         end_date = self.match_data["days_elapsed_date"].squeeze()[idx] - 1
-        start_date = end_date - 365
+        start_date = end_date - 2000
 
         # Get the tabular features and the target
         match_x = {k: v[idx, :] for k, v in self.match_data.items()}
