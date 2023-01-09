@@ -50,7 +50,7 @@ class TabularInputLayer(nn.Module):
         for k, v in self.interface.type_map.items():
 
             if v[0] == "numeric":
-                self.embedding[k] = nn.Linear(v[2].shape[0], embedding_size)
+                self.embedding[k] = nn.Linear(v[2].shape[0] - 1, embedding_size)
 
             elif v[0] == "categorical":
                 self.embedding[k] = nn.Embedding(len(v[1]), embedding_size)
@@ -132,7 +132,7 @@ class SequentialInputLayer(nn.Module):
         for k, v in self.interface.type_map.items():
 
             if v[0] == "numeric":
-                self.embedding[k] = nn.Linear(v[2].shape[0], embedding_size)
+                self.embedding[k] = nn.Linear(v[2].shape[0] - 1, embedding_size)
 
             elif v[0] == "categorical":
                 self.embedding[k] = nn.Sequential(

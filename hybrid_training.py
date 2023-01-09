@@ -20,7 +20,7 @@ experiment_name = "washed_net"
 # I don't want to type training_parameters a bunch of times...
 tp = {
     # Data parameters
-    "history_length": 0,  # How many matches of history are provided
+    "history_length": 20,  # How many matches of history are provided
     "validation_set_size": 0.25,  # Ratio for train/test split.
     # Network architecture
     "col_encoding_size": 16,  # Size of learned column/position encodings
@@ -32,7 +32,7 @@ tp = {
     # Training parameters
     "batch_size": 1024,  # Batch size
     "learning_rate": 0.0001,  # Learning rate, currently just fixed
-    "n_epochs": 2,  # Training epochs
+    "n_epochs": 15,  # Training epochs
 }
 
 
@@ -264,7 +264,7 @@ if __name__ == "__main__":
                     valid_n += y_hat.shape[0]
 
                 print(
-                    f"Epoch {epoch + 1} validation loss: {running_loss / running_n :.3f} | ",
+                    f"Epoch {epoch + 1} validation loss: {valid_loss / valid_n :.3f} | ",
                     f"Accuracy: {valid_correct / valid_n :.3f} | ",
                     f"{valid_n / (perf_counter() - tick) :6.0f} obs/sec | ",
                     f"{perf_counter() - big_tick :.2f} s",

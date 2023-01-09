@@ -14,20 +14,23 @@ def tr(dt, col_name, interface):
     if interface[col_name][0] == "numeric":
 
         dt = torch.tensor(dt.to_numpy(), dtype=torch.float).unsqueeze(-1)
-        q = interface[col_name][2].unsqueeze(0).expand([dt.shape[0], -1])
+        q = interface[col_name][2].reshape(1, -1)
+        diffs = q[:, 1:] - q[:, :-1]
 
         # Create the tensor and fill the completely filled cells
-        encoded = torch.as_tensor(q < dt, dtype=torch.float)
+        encoded = torch.as_tensor(q < dt, dtype=torch.float)[:, 1:]
 
         # Find the partially filled cells
-        # (I'm guessing the cuteness here is numerically dangerous.)
-        part_filled = torch.argmax(1 / (q - dt), dim=1)
+        part_filled = torch.argmax(1 / (q - dt), dim=1) - 1
 
         # Calculate the fill values
-        fill_values = q[range(q.shape[0]), part_filled].view([dt.shape[0], 1]) - dt
+        partial_values = (dt - q[:, part_filled].reshape(-1, 1)) / diffs[
+            :, part_filled
+        ].reshape(-1, 1)
 
         # Fill the partial values
-        encoded[range(encoded.shape[0]), part_filled] = fill_values.squeeze()
+        which = torch.nonzero(part_filled >= 0, as_tuple=False)
+        encoded[which, part_filled[which]] = partial_values[which].reshape(-1, 1)
 
         return encoded
 
