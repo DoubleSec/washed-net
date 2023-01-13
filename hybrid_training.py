@@ -28,11 +28,13 @@ tp = {
     "dim_ff": 64,  # Size of linear layers in transformer
     "n_transformer_layers": 4,  # Transformer depth
     "n_transformer_heads": 4,  # Attention heads, must divide dim_model
-    "n_output_layers": 3,  # Depth of linear output layers
+    "n_output_layers": 1,  # Depth of linear output layers
     # Training parameters
     "batch_size": 1024,  # Batch size
     "learning_rate": 0.0001,  # Learning rate, currently just fixed
-    "n_epochs": 15,  # Training epochs
+    "n_epochs": 15,  # Training epochs,
+    # Other stuff
+    "note": "Norms and stuff",
 }
 
 
@@ -99,7 +101,7 @@ if __name__ == "__main__":
         embedding_size=tp["dim_model"] - tp["col_encoding_size"],
     )
 
-    output_layers = net.OutputLayers(tp["dim_model"], tp["n_output_layers"], 1)
+    output_layers = net.OutputLayers(tp["dim_model"], tp["n_output_layers"])
 
     # Transformer encoder
     tr = nn.TransformerEncoder(
@@ -108,6 +110,7 @@ if __name__ == "__main__":
             nhead=tp["n_transformer_heads"],
             dim_feedforward=tp["dim_ff"],
             batch_first=True,
+            norm_first=True,
         ),
         num_layers=tp["n_transformer_layers"],
     )

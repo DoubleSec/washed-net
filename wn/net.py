@@ -18,8 +18,10 @@ class Time2Vec(nn.Module):
 
         self.size = size
         # TKTK Is this the right initialization?
-        self.weight = nn.Parameter(torch.normal(torch.zeros([1, self.size]), 1.0))
-        self.bias = nn.Parameter(torch.normal(torch.zeros([1, self.size]), 1.0))
+        self.weight = nn.Parameter(torch.zeros([1, self.size]))
+        nn.init.kaiming_uniform_(self.weight, nonlinearity="relu")
+        self.bias = nn.Parameter(torch.zeros([1, self.size]))
+        nn.init.kaiming_uniform_(self.bias, nonlinearity="relu")
 
     def forward(self, x):
 
@@ -61,7 +63,10 @@ class TabularInputLayer(nn.Module):
                 # provide them to the transformer, analogous to the numeric
                 # embeddings.
                 self.embedding[k] = nn.Sequential(
-                    Time2Vec(embedding_size), nn.Linear(embedding_size, embedding_size)
+                    Time2Vec(embedding_size),
+                    nn.LayerNorm(embedding_size),
+                    nn.ReLU(),
+                    nn.Linear(embedding_size, embedding_size),
                 )
 
         # Initialize the column encoding
@@ -145,21 +150,26 @@ class SequentialInputLayer(nn.Module):
                 # provide them to the transformer, analogous to the numeric
                 # embeddings.
                 self.embedding[k] = nn.Sequential(
-                    Time2Vec(embedding_size), nn.Linear(embedding_size, embedding_size)
+                    Time2Vec(embedding_size),
+                    nn.LayerNorm(embedding_size),
+                    nn.ReLU(),
+                    nn.Linear(embedding_size, embedding_size),
                 )
 
-        self.projection_layer = nn.Linear(
-            self.embedding_size * len(self.embedding), self.embedding_size
+        self.projection_layers = nn.Sequential(
+            nn.Linear(self.embedding_size * len(self.embedding), self.embedding_size),
+            nn.LayerNorm([self.embedding_size]),
+            nn.ReLU(),
         )
 
         # Initialize the column encoding
-        self.sequence_encoding = nn.Parameter(
-            torch.normal(torch.zeros(self.sequence_encoding_size), 1.0)
-        )
+        self.sequence_encoding = nn.Parameter(torch.zeros(self.sequence_encoding_size))
+        nn.init.kaiming_uniform_(self.sequence_encoding, nonlinearity="relu")
 
         self.padding_encoding = nn.Parameter(
-            torch.normal(torch.zeros(1, self.sequence_encoding_size[1]), 1.0)
+            torch.zeros(1, self.sequence_encoding_size[1])
         )
+        nn.init.kaiming_uniform_(self.padding_encoding, nonlinearity="relu")
 
     def forward(self, x: dict, mask: torch.Tensor):
 
@@ -167,8 +177,9 @@ class SequentialInputLayer(nn.Module):
         # n x s x e
         x = torch.cat([self.embedding[k](v) for k, v in x.items()], dim=-1)
 
-        x = F.relu(x)
-        x = self.projection_layer(x)
+        # Don't put a relu here.
+        # x = F.relu(x)
+        x = self.projection_layers(x)
 
         # Expand the sequence encodings so we can concatenate them (s x e -> n x s x e)
         exp_seq_encoding = self.sequence_encoding.unsqueeze(0).expand(
@@ -178,7 +189,7 @@ class SequentialInputLayer(nn.Module):
         # black has no idea how to format this, huh
         final_seq_encoding = exp_seq_encoding * mask.unsqueeze(
             -1
-        ) + self.padding_encoding.unsqueeze(0) * ~mask.unsqueeze(-1)
+        ) + self.padding_encoding * ~mask.unsqueeze(-1)
 
         # Attach the column encodings to the encoded data.
         # n x s x e
@@ -224,24 +235,23 @@ class FusionNet(nn.Module):
 
 # fc layers for output
 class OutputLayers(nn.Module):
-    def __init__(self, d_model, n_hidden, output_size):
+    def __init__(self, d_model, output_size):
         """d_model should be the same as the transformer encoder"""
 
         super().__init__()
         self.d_model = d_model
         self.output_size = output_size
-        self.n_hidden = n_hidden
 
         self.layers = nn.Sequential()
 
         # Add the hidden layers
-        for i in range(n_hidden):
-            self.layers.append(nn.Linear(d_model, d_model))
-            self.layers.append(nn.BatchNorm1d(d_model))
-            self.layers.append(nn.ReLU())
+        # Matching the design of FT-Transformer here
+        self.layers.append(nn.LayerNorm(self.d_model))
+        self.layers.append(nn.ReLU())
+        self.layers.append(nn.Linear(d_model, output_size))
 
         # Add the output layer (no output activation)
-        self.layers.append(nn.Linear(d_model, output_size))
+        # self.layers.append(nn.Linear(d_model, output_size))
 
     def forward(self, x):
 
