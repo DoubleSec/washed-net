@@ -23,8 +23,8 @@ tp = {
     "history_length": 20,  # How many matches of history are provided
     "validation_set_size": 0.25,  # Ratio for train/test split.
     # Network architecture
-    "col_encoding_size": 16,  # Size of learned column/position encodings
-    "dim_model": 64,  # Size of many layers in net
+    "col_encoding_size": 12,  # Size of learned column/position encodings
+    "dim_model": 48,  # Size of many layers in net
     "dim_ff": 64,  # Size of linear layers in transformer
     "n_transformer_layers": 4,  # Transformer depth
     "n_transformer_heads": 4,  # Attention heads, must divide dim_model
@@ -34,7 +34,7 @@ tp = {
     "learning_rate": 0.0001,  # Learning rate, currently just fixed
     "n_epochs": 15,  # Training epochs,
     # Other stuff
-    "note": "Norms and stuff",
+    "note": "Corrected preprocessing, smaller network",
 }
 
 

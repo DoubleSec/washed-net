@@ -13,26 +13,16 @@ def tr(dt, col_name, interface):
 
     if interface[col_name][0] == "numeric":
 
-        dt = torch.tensor(dt.to_numpy(), dtype=torch.float).unsqueeze(-1)
+        x = torch.tensor(dt.to_numpy(), dtype=torch.float).unsqueeze(-1)
         q = interface[col_name][2].reshape(1, -1)
-        diffs = q[:, 1:] - q[:, :-1]
+        d = q[:, 1:] - q[:, :-1]
 
-        # Create the tensor and fill the completely filled cells
-        encoded = torch.as_tensor(q < dt, dtype=torch.float)[:, 1:]
+        a = (x - q[:, :-1]) / d
+        a[:, 1:] = torch.maximum(a[:, 1:], torch.tensor(0))
+        a[:, :-1] = torch.minimum(a[:, :-1], torch.tensor(1))
+        a = a.nan_to_num(0)  # If buckets are size 0
 
-        # Find the partially filled cells
-        part_filled = torch.argmax(1 / (q - dt), dim=1) - 1
-
-        # Calculate the fill values
-        partial_values = (dt - q[:, part_filled].reshape(-1, 1)) / diffs[
-            :, part_filled
-        ].reshape(-1, 1)
-
-        # Fill the partial values
-        which = torch.nonzero(part_filled >= 0, as_tuple=False)
-        encoded[which, part_filled[which]] = partial_values[which].reshape(-1, 1)
-
-        return encoded
+        return a
 
     elif interface[col_name][0] == "time":
         return torch.tensor(dt.to_numpy(), dtype=torch.float).unsqueeze(-1)
@@ -73,7 +63,7 @@ class DataInterface:
                 "All specified types must be 'numeric', 'time', or 'categorical'"
             )
 
-    def complete(self, data: pd.DataFrame):
+    def complete(self, data: pd.DataFrame, numeric_size: int = 16):
 
         for col, val in self.type_map.items():
 
@@ -85,7 +75,7 @@ class DataInterface:
                     dt.to_numpy().mean().item(),
                     torch.quantile(
                         torch.tensor(dt.to_numpy(), dtype=torch.float),
-                        torch.linspace(0, 1, 16),
+                        torch.linspace(0, 1, numeric_size + 1),
                     ),
                 )
 
