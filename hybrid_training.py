@@ -13,17 +13,18 @@ from time import perf_counter
 # You may not have mflow set up, in which case you probably need to remove this.
 import mlflow
 
-experiment_name = "washed_net"
+experiment_name = "washed_net_NO_RANK"
 
 # Set all the training parameters up here.
 
 # I don't want to type training_parameters a bunch of times...
 tp = {
     # Data parameters
-    "history_length": 20,  # How many matches of history are provided
+    "history_length": 30,  # How many matches of history are provided
     "validation_set_size": 0.25,  # Ratio for train/test split.
     # Network architecture
     "col_encoding_size": 12,  # Size of learned column/position encodings
+    "learnable_padding": False,  # Control whether padding embeding is learned
     "dim_model": 48,  # Size of many layers in net
     "dim_ff": 64,  # Size of linear layers in transformer
     "n_transformer_layers": 4,  # Transformer depth
@@ -34,7 +35,7 @@ tp = {
     "learning_rate": 0.0001,  # Learning rate, currently just fixed
     "n_epochs": 15,  # Training epochs,
     # Other stuff
-    "note": "Corrected preprocessing, smaller network",
+    "note": "History length testing",
 }
 
 
@@ -93,12 +94,14 @@ if __name__ == "__main__":
         interface=history_interface,
         sequence_encoding_size=[tp["history_length"], tp["col_encoding_size"]],
         embedding_size=tp["dim_model"] - tp["col_encoding_size"],
+        learnable_padding=tp["learnable_padding"],
     )
 
     p2_sequence_input_layer = net.SequentialInputLayer(
         interface=history_interface,
         sequence_encoding_size=[tp["history_length"], tp["col_encoding_size"]],
         embedding_size=tp["dim_model"] - tp["col_encoding_size"],
+        learnable_padding=tp["learnable_padding"],
     )
 
     output_layers = net.OutputLayers(tp["dim_model"], tp["n_output_layers"])

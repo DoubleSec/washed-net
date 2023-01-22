@@ -5,6 +5,12 @@ import torch
 
 import pickle
 
+# PLEASE NOTE: This file creates data with NO RANK INFORMATION. This is clearly worse,
+# but it's useful for experimenting.
+
+# PLEASE ALSO NOTE: It's set up by default to write to the same file names as
+# the other data construction script. Sorry, it's confusing.
+
 # Initial processing ---------------------------------------------------------
 
 print("Loading match list")
@@ -46,9 +52,9 @@ matches = matches.loc[
 # perspective, and one from the loser's.
 
 desired_cols = [
-    "winner_rank",
+    "best_of",
+    "round",
     "winner_hand",
-    "loser_rank",
     "loser_hand",
     "surface",
     "tourney_level",
@@ -68,15 +74,15 @@ winner_matches = (
     augmented_matches[
         [
             "winner_id",
-            "winner_rank",
             "winner_hand",
             "winner_dob",
             "loser_id",
-            "loser_rank",
             "loser_hand",
             "loser_dob",
             "surface",
             "tourney_level",
+            "best_of",
+            "round",
             "days_elapsed_date",
         ]
     ]
@@ -85,11 +91,9 @@ winner_matches = (
     .rename(
         {
             "winner_id": "p1_id",
-            "winner_rank": "p1_rank",
             "winner_hand": "p1_hand",
             "winner_dob": "p1_dob",
             "loser_id": "p2_id",
-            "loser_rank": "p2_rank",
             "loser_hand": "p2_hand",
             "loser_dob": "p2_dob",
         },
@@ -101,15 +105,15 @@ loser_matches = (
     augmented_matches[
         [
             "loser_id",
-            "loser_rank",
             "loser_hand",
             "loser_dob",
             "winner_id",
-            "winner_rank",
             "winner_hand",
             "winner_dob",
             "surface",
             "tourney_level",
+            "best_of",
+            "round",
             "days_elapsed_date",
         ]
     ]
@@ -118,11 +122,9 @@ loser_matches = (
     .rename(
         {
             "loser_id": "p1_id",
-            "loser_rank": "p1_rank",
             "loser_hand": "p1_hand",
             "loser_dob": "p1_dob",
             "winner_id": "p2_id",
-            "winner_rank": "p2_rank",
             "winner_hand": "p2_hand",
             "winner_dob": "p2_dob",
         },
@@ -148,14 +150,14 @@ print("Processing target match features")
 
 match_interface = DataInterface(
     {
-        "p1_rank": "numeric",
         "p1_hand": "categorical",
         "p1_dob": "time",
-        "p2_rank": "numeric",
         "p2_hand": "categorical",
         "p2_dob": "time",
         "surface": "categorical",
         "tourney_level": "categorical",
+        "best_of": "categorical",
+        "round": "categorical",
         "days_elapsed_date": "time",
     }
 )
@@ -185,12 +187,12 @@ print("Processing historical match features")
 
 history_interface = DataInterface(
     {
-        "p1_rank": "numeric",
-        "p2_rank": "numeric",
         "p2_hand": "categorical",
         "p2_dob": "time",
         "surface": "categorical",
         "tourney_level": "categorical",
+        "best_of": "categorical",
+        "round": "categorical",
         "days_elapsed_date": "time",
         "won": "categorical",
     }

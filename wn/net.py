@@ -124,6 +124,7 @@ class SequentialInputLayer(nn.Module):
         interface: DataInterface,
         sequence_encoding_size,
         embedding_size: int,
+        learnable_padding: bool = True,
     ):
 
         super().__init__()
@@ -131,6 +132,7 @@ class SequentialInputLayer(nn.Module):
         self.interface = interface
         self.sequence_encoding_size = sequence_encoding_size
         self.embedding_size = embedding_size
+        self.learnable_padding = learnable_padding
 
         # Initialize the embedding layer for each column
         self.embedding = nn.ModuleDict()
@@ -169,7 +171,12 @@ class SequentialInputLayer(nn.Module):
         self.padding_encoding = nn.Parameter(
             torch.zeros(1, self.sequence_encoding_size[1])
         )
-        nn.init.kaiming_uniform_(self.padding_encoding, nonlinearity="relu")
+
+        # If the padding embedding is learnable, initialize it
+        if self.learnable_padding:
+            nn.init.kaiming_uniform_(self.padding_encoding, nonlinearity="relu")
+        else:
+            self.padding_encoding.requires_grad_(False)
 
     def forward(self, x: dict, mask: torch.Tensor):
 
