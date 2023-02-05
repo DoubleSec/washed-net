@@ -186,8 +186,9 @@ class MatchHistoryDataset(Dataset):
             window_left_bound, window_right_bound - self.history_size
         )
 
+        # flip so the latest match is first
         history_x = {
-            k: self._pad_history(v[effective_left_bound:window_right_bound, :])
+            k: self._pad_history(torch.flip(v[effective_left_bound:window_right_bound, :], dims=(0,)))
             for k, v in self.history_data.items()
         }
 

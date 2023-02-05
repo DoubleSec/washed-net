@@ -13,7 +13,7 @@ from time import perf_counter
 # You may not have mflow set up, in which case you probably need to remove this.
 import mlflow
 
-experiment_name = "washed_net_NO_RANK"
+experiment_name = "washed_net"
 
 # Set all the training parameters up here.
 
@@ -28,14 +28,15 @@ tp = {
     "dim_model": 48,  # Size of many layers in net
     "dim_ff": 64,  # Size of linear layers in transformer
     "n_transformer_layers": 4,  # Transformer depth
-    "n_transformer_heads": 4,  # Attention heads, must divide dim_model
+    "n_transformer_heads": 1,  # Attention heads, must divide dim_model
     "n_output_layers": 1,  # Depth of linear output layers
     # Training parameters
     "batch_size": 1024,  # Batch size
     "learning_rate": 0.0001,  # Learning rate, currently just fixed
-    "n_epochs": 15,  # Training epochs,
+    "n_epochs": 10,  # Training epochs,
+    "use_pretrained": False,  # Use pre-trained layers?
     # Other stuff
-    "note": "History length testing",
+    "note": "I just need a trained network to test something",
 }
 
 
@@ -54,6 +55,7 @@ with open("data/match_interface.pkl", "rb") as f:
 
 with open("data/history_interface.pkl", "rb") as f:
     history_interface = pickle.load(f)
+
 
 # Make a dataset
 ds = MatchHistoryDataset(
@@ -103,6 +105,15 @@ if __name__ == "__main__":
         embedding_size=tp["dim_model"] - tp["col_encoding_size"],
         learnable_padding=tp["learnable_padding"],
     )
+
+    # Load the embeddings and projection layers from the pretrained_model
+
+    if tp["use_pretrained"]:
+
+        # Load the pre-trained parts of this model:
+        pretrained_state_dict = torch.load("./model/pretrained_model.pt")
+        p1_sequence_input_layer.load_state_dict(pretrained_state_dict, strict=False)
+        p2_sequence_input_layer.load_state_dict(pretrained_state_dict, strict=False)
 
     output_layers = net.OutputLayers(tp["dim_model"], tp["n_output_layers"])
 
@@ -284,3 +295,7 @@ if __name__ == "__main__":
                     },
                     step=n_training_obs,
                 )
+
+    with open("./model/test_model_config.pkl", "wb") as f:
+        pickle.dump(tp, f)
+    torch.save(whole_net.state_dict(), "./model/test_model.pt")

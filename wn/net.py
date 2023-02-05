@@ -204,6 +204,15 @@ class SequentialInputLayer(nn.Module):
 
         return x
 
+    def freeze_embeddings(self, _: bool = True):
+
+        if _:
+            self.embedding.eval()
+            self.projection_layers.eval()
+        else:
+            self.embedding.train()
+            self.projection_layers.train()
+
 
 class FusionNet(nn.Module):
     """This class is a replacement for the nn.Sequential in the first version, because
@@ -238,6 +247,22 @@ class FusionNet(nn.Module):
         x = self.output_layer(x[:, -1, :])
 
         return x
+
+    def name_positions(self):
+
+        names = []
+        names += [
+            f"p1_m{i :02d}"
+            for i in range(self.p1_sequence_input_layer.sequence_encoding_size[0])
+        ]
+        names += [
+            f"p2_m{i :02d}"
+            for i in range(self.p2_sequence_input_layer.sequence_encoding_size[0])
+        ]
+        names += [k for k in self.table_input_layer.interface.type_map.keys()]
+        names += ["CLS"]
+
+        return names
 
 
 # fc layers for output

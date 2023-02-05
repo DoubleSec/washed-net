@@ -3,3 +3,6 @@
 torch
 pandas
 mlflow
+info-nce-pytorch
+# For attention visualization
+seaborn
