@@ -33,7 +33,7 @@ tp = {
     # Training parameters
     "batch_size": 1024,  # Batch size
     "learning_rate": 0.0001,  # Learning rate, currently just fixed
-    "n_epochs": 10,  # Training epochs,
+    "n_epochs": 25,  # Training epochs,
     "use_pretrained": False,  # Use pre-trained layers?
     # Other stuff
     "note": "I just need a trained network to test something",

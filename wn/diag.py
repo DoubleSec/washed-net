@@ -32,6 +32,4 @@ def total_attention(attention_weights: list):
         else:
             total_weight = total_weight @ layer
 
-    total_weight = total_weight.mean(dim=(0, 1))
-
     return total_weight
